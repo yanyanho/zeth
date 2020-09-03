@@ -41,6 +41,7 @@ static void serialize_setup_to_file(
     const boost::filesystem::path path_vk_json = setup_path / "vk.json";
     const boost::filesystem::path path_vk_raw = setup_path / "vk.raw";
     const boost::filesystem::path path_pk_raw = setup_path / "pk.raw";
+    const boost::filesystem::path path_keypair = "/home/zeth/build/keypair";
 
     const typename snark::ProvingKeyT &proving_key = keypair.pk;
     const typename snark::VerificationKeyT &verification_key = keypair.vk;
@@ -59,6 +60,10 @@ static void serialize_setup_to_file(
     {
         std::ofstream pk_bytes_s(path_pk_raw.c_str());
         snark::proving_key_write_bytes(proving_key, pk_bytes_s);
+    }
+    {
+        std::ofstream keypair_bytes(path_keypair.c_str());
+        snark::keypair_write_bytes(keypair_bytes, keypair);
     }
 }
 
