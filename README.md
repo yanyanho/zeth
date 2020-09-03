@@ -1,3 +1,5 @@
+./prover_server/prover_server -k keypair
+
 # Zeth - Zerocash on Ethereum
 
 :rotating_light: **WARNING** This project is a Proof of Concept. It is highly inefficient and has not been thoroughly reviewed. Please do not use in production!
