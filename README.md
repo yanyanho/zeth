@@ -1,3 +1,9 @@
+ make prover_test
+./libzeth/tests/prover_test 
+./prover_server/prover_server
+
+
+
 # Zeth - Zerocash on Ethereum
 
 :rotating_light: **WARNING** This project is a Proof of Concept. It is highly inefficient and has not been thoroughly reviewed. Please do not use in production!
