@@ -27,16 +27,16 @@ public:
     // binary encoding of the address
     bits_addr<TreeDepth> address_bits;
     zeth_note note;
-    bits256 spending_key_a_sk;
-    bits256 nullifier;
+    bits254 spending_key_a_sk;
+    bits254 nullifier;
 
     joinsplit_input(){};
     joinsplit_input(
         std::vector<FieldT> witness_merkle_path,
         std::array<bool, TreeDepth> address_bits,
         zeth_note note,
-        bits256 key,
-        bits256 nullifier)
+        bits254 key,
+        bits254 nullifier)
         : witness_merkle_path(witness_merkle_path)
         , address_bits(address_bits)
         , note(note)

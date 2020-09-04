@@ -4,7 +4,8 @@
 // DISCLAIMER:
 // Content Taken and adapted from Zcash
 // https://github.com/zcash/zcash/blob/master/src/zcash/circuit/commitment.tcc
-
+#include "libzeth/core/field_element_utils.hpp"
+#include "libzeth/core/utils.hpp"
 namespace libzeth
 {
 
@@ -17,24 +18,45 @@ COMM_gadget<FieldT, HashT>::COMM_gadget(
     const std::string &annotation_prefix)
     : libsnark::gadget<FieldT>(pb, annotation_prefix), result(result)
 {
+        /*
     block.reset(new libsnark::block_variable<FieldT>(
         pb, {x, y}, FMT(this->annotation_prefix, " block")));
 
     hasher.reset(new HashT(
         pb, *block, *result, FMT(this->annotation_prefix, " hasher_gadget")));
+         */
+    left.allocate(pb, "left");
+    pb.val(left) = x.get_field_element_from_bits(pb);
+    std::cout << "cm left: " << std::endl;
+    x.get_field_element_from_bits(pb).print();
+    right.allocate(pb, "right");
+    pb.val(right) = y.get_field_element_from_bits(pb);
+    std::cout << "cm right: " << std::endl;
+    y.get_field_element_from_bits(pb).print();
+    hasher.reset(new HashT(
+            pb, left, right, FMT(this->annotation_prefix, " hasher_gadget")));
 }
 
 template<typename FieldT, typename HashT>
 void COMM_gadget<FieldT, HashT>::generate_r1cs_constraints()
 {
     // ensure_output_bitness set to true
-    hasher->generate_r1cs_constraints(true);
+    hasher->generate_r1cs_constraints();
 }
 
 template<typename FieldT, typename HashT>
 void COMM_gadget<FieldT, HashT>::generate_r1cs_witness()
 {
     hasher->generate_r1cs_witness();
+    std::cout << "cm hash result: " << std::endl;
+    this->pb.val(hasher->result()).print();
+    std::cout << "x in hasher: " << std::endl;
+    this->pb.val(hasher->x).print();
+    std::cout << "y in hasher: " << std::endl;
+    this->pb.val(hasher->y).print();
+    std::cout << "hex: " << field_element_to_hex(this->pb.val(hasher->result())) << std::endl;
+    result->generate_r1cs_witness(libff::bit_vector(
+            bits254_to_vector(bits254_from_hex(field_element_to_hex(this->pb.val(hasher->result()))))));
 }
 
 // See Zerocash extended paper, page 22
@@ -57,15 +79,27 @@ COMM_cm_gadget<FieldT, HashT>::COMM_cm_gadget(
     , value_v(value_v)
 {
     // Allocate temporary variable
+    //ZETH_V_SIZE + 2 * HashT::get_digest_len()
     input.allocate(
         pb,
-        ZETH_V_SIZE + 2 * HashT::get_digest_len(),
+        254,
         FMT(this->annotation_prefix, " cm_input"));
 
     temp_result.reset(new libsnark::digest_variable<FieldT>(
         pb,
         HashT::get_digest_len(),
         FMT(this->annotation_prefix, " cm_temp_output")));
+
+    std::vector<bool> temp;
+    std::vector<bool> apk_bits = a_pk.get_bits(pb);
+    //temp.insert(temp.end(), apk_bits.begin(), apk_bits.end());
+    temp.insert(temp.end(), apk_bits.begin(), apk_bits.begin()+94);
+    std::vector<bool> rho_bits = rho.get_bits(pb);
+    //temp.insert(temp.end(), rho_bits.begin(), rho_bits.end());
+    temp.insert(temp.end(), rho_bits.begin(), rho_bits.begin()+94);
+    std::vector<bool> v_bits = value_v.get_bits(pb);
+    temp.insert(temp.end(), v_bits.begin(), v_bits.end());
+    input.fill_with_bits(pb, temp);
 
     // Allocate gadgets
     com_gadget.reset(new COMM_gadget<FieldT, HashT>(
@@ -94,15 +128,18 @@ void COMM_cm_gadget<FieldT, HashT>::generate_r1cs_constraints()
 template<typename FieldT, typename HashT>
 void COMM_cm_gadget<FieldT, HashT>::generate_r1cs_witness()
 {
+    /*
     std::vector<bool> temp;
     std::vector<bool> apk_bits = a_pk.get_bits(this->pb);
-    temp.insert(temp.end(), apk_bits.begin(), apk_bits.end());
+    //temp.insert(temp.end(), apk_bits.begin(), apk_bits.end());
+    temp.insert(temp.end(), apk_bits.begin(), apk_bits.begin()+94);
     std::vector<bool> rho_bits = rho.get_bits(this->pb);
-    temp.insert(temp.end(), rho_bits.begin(), rho_bits.end());
+    //temp.insert(temp.end(), rho_bits.begin(), rho_bits.end());
+    temp.insert(temp.end(), rho_bits.begin(), rho_bits.begin()+93);
     std::vector<bool> v_bits = value_v.get_bits(this->pb);
     temp.insert(temp.end(), v_bits.begin(), v_bits.end());
     input.fill_with_bits(this->pb, temp);
-
+    */
     com_gadget->generate_r1cs_witness();
     bits_to_field->generate_r1cs_witness_from_bits();
 }

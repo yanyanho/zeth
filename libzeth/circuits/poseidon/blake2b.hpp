@@ -45,3 +45,4 @@ int blake2b(void *out, size_t outlen,   // return buffer for digest
 #endif
 
 #endif
+

@@ -18,6 +18,7 @@ namespace libzeth
 // Gadget that makes sure that the note:
 // - Has a value < 2^64
 // - Has a valid r trapdoor which is a 256-bit string
+/*
 template<typename FieldT> class note_gadget : public libsnark::gadget<FieldT>
 {
 public:
@@ -32,19 +33,19 @@ public:
     void generate_r1cs_constraints();
     void generate_r1cs_witness(const zeth_note &note);
 };
-
+*/
 // Gadget that makes sure that all conditions are met in order to spend a note:
 // - The nullifier is correctly computed from a_sk and rho
 // - The commitment cm is correctly computed from the coin's data
 // - commitment cm is in the tree of merkle root rt
 template<typename FieldT, typename HashT, typename HashTreeT, size_t TreeDepth>
-class input_note_gadget : public note_gadget<FieldT>
+class input_note_gadget : public libsnark::gadget<FieldT>
 {
 private:
     // Output of a PRF (digest_variable)
     std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk;
     // Nullifier seed (256 bits)
-    libsnark::pb_variable_array<FieldT> rho;
+    //std::shared_ptr<libsnark::digest_variable<FieldT>> rho;
 
     std::shared_ptr<COMM_cm_gadget<FieldT, HashT>> commit_to_inputs_cm;
     // Note commitment (bits), output of COMMIT gadget
@@ -72,14 +73,19 @@ private:
     std::shared_ptr<libsnark::digest_variable<FieldT>> nullifier;
 
 public:
+    libsnark::pb_variable_array<FieldT> value;
+    libsnark::pb_variable_array<FieldT> r;
     input_note_gadget(
         libsnark::protoboard<FieldT> &pb,
         const libsnark::pb_variable<FieldT> &ZERO,
         std::shared_ptr<libsnark::digest_variable<FieldT>> a_sk,
         // Input note Nullifier
         std::shared_ptr<libsnark::digest_variable<FieldT>> nullifier,
+        // Input note root
+        std::shared_ptr<libsnark::digest_variable<FieldT>> rho,
         // Current Merkle root
         const libsnark::pb_variable<FieldT> &rt,
+        const zeth_note &note,
         const std::string &annotation_prefix = "input_note_gadget");
 
     // Check the booleaness of the rho
@@ -95,17 +101,20 @@ public:
 
 // Commit to the output notes of the JS
 template<typename FieldT, typename HashT>
-class output_note_gadget : public note_gadget<FieldT>
+class output_note_gadget : public libsnark::gadget<FieldT>
 {
 private:
     std::shared_ptr<libsnark::digest_variable<FieldT>> a_pk;
     std::shared_ptr<COMM_cm_gadget<FieldT, HashT>> commit_to_outputs_cm;
 
 public:
+    libsnark::pb_variable_array<FieldT> value;
+    libsnark::pb_variable_array<FieldT> r;
     output_note_gadget(
         libsnark::protoboard<FieldT> &pb,
         std::shared_ptr<libsnark::digest_variable<FieldT>> rho,
         const libsnark::pb_variable<FieldT> &commitment,
+        const zeth_note &note,
         const std::string &annotation_prefix = "output_note_gadget");
 
     // Check the booleaness of the a_pk

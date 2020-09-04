@@ -18,15 +18,17 @@ class COMM_gadget : libsnark::gadget<FieldT>
 {
 private:
     // input variable block = {x, y}
-    std::shared_ptr<libsnark::block_variable<FieldT>> block;
-
+    //std::shared_ptr<libsnark::block_variable<FieldT>> block;
     // Hash gadget used as a commitment
     std::shared_ptr<HashT> hasher;
 
     // hash digest = HashT(x || y)
-    std::shared_ptr<libsnark::digest_variable<FieldT>> result;
+    //std::shared_ptr<libsnark::digest_variable<FieldT>> result;
 
 public:
+    libsnark::pb_variable<FieldT> left;
+    libsnark::pb_variable<FieldT> right;
+    std::shared_ptr<libsnark::digest_variable<FieldT>> result;
     COMM_gadget(
         libsnark::protoboard<FieldT> &pb,
         const libsnark::pb_variable_array<FieldT> &x,

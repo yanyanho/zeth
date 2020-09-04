@@ -47,8 +47,17 @@ typename snarkT::KeypairT circuit_wrapper<
     TreeDepth>::generate_trusted_setup() const
 {
     libsnark::protoboard<FieldT> pb;
+    std::array<FieldT, NumInputs> roots;
+    //roots[0] = FieldT("0");
+    //roots[1] = FieldT("0");
+    std::array<joinsplit_input<FieldT, TreeDepth>, NumInputs> inputs;
+    std::array<zeth_note, NumOutputs> outputs;
+    bits64 vpub_in;
+    bits64 vpub_out;
+    bits254 h_sig_in;
+    bits254 phi_in;
     joinsplit_gadget<FieldT, HashT, HashTreeT, NumInputs, NumOutputs, TreeDepth>
-        g(pb);
+        g(pb, roots, inputs, outputs, vpub_in, vpub_out, h_sig_in, phi_in);
     g.generate_r1cs_constraints();
 
     // Generate a verification and proving key (trusted setup) and write them
@@ -74,8 +83,19 @@ libsnark::protoboard<libff::Fr<ppT>> circuit_wrapper<
     TreeDepth>::get_constraint_system() const
 {
     libsnark::protoboard<FieldT> pb;
+    std::array<FieldT, NumInputs> roots;
+    //roots[0] = FieldT("0");
+    //roots[1] = FieldT("0");
+    std::array<joinsplit_input<FieldT, TreeDepth>, NumInputs> inputs;
+    std::array<zeth_note, NumOutputs> outputs;
+    bits64 vpub_in = bits64_from_hex("2F0000000000000F");
+    bits64 vpub_out = bits64_from_hex("2F0000000000000F");
+    bits254 h_sig_in = bits254_from_hex(
+            "15b86771a6ac5a24fb0a9a4d369d00070f495685c1783bec6b2d21f5efa24eef");
+    bits254 phi_in = bits254_from_hex(
+            "15b86771a6ac5a24fb0a9a4d369d00070f495685c1783bec6b2d21f5efa24eef");
     joinsplit_gadget<FieldT, HashT, HashTreeT, NumInputs, NumOutputs, TreeDepth>
-        g(pb);
+        g(pb, roots, inputs, outputs, vpub_in, vpub_out, h_sig_in, phi_in);
     g.generate_r1cs_constraints();
     return pb;
 }
@@ -102,8 +122,8 @@ extended_proof<ppT, snarkT> circuit_wrapper<
         const std::array<zeth_note, NumOutputs> &outputs,
         const bits64 &vpub_in,
         const bits64 &vpub_out,
-        const bits256 &h_sig_in,
-        const bits256 &phi_in,
+        const bits254 &h_sig_in,
+        const bits254 &phi_in,
         const typename snarkT::ProvingKeyT &proving_key) const
 {
     // left hand side and right hand side of the joinsplit
@@ -131,7 +151,7 @@ extended_proof<ppT, snarkT> circuit_wrapper<
     libsnark::protoboard<FieldT> pb;
 
     joinsplit_gadget<FieldT, HashT, HashTreeT, NumInputs, NumOutputs, TreeDepth>
-        g(pb);
+        g(pb, roots, inputs, outputs, vpub_in, vpub_out, h_sig_in, phi_in);
     g.generate_r1cs_constraints();
     g.generate_r1cs_witness(
         roots, inputs, outputs, vpub_in, vpub_out, h_sig_in, phi_in);

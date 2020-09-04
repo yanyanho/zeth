@@ -122,7 +122,6 @@ std::string bytes_to_hex_reversed(const void *bytes, size_t num_bytes)
     if (num_bytes == 0) {
         return "";
     }
-
     std::string out;
     out.reserve(num_bytes * 2);
     const uint8_t *const src_bytes_end = (const uint8_t *)bytes;
@@ -133,7 +132,6 @@ std::string bytes_to_hex_reversed(const void *bytes, size_t num_bytes)
         out.push_back(nibble_hex(byte >> 4));
         out.push_back(nibble_hex(byte & 0x0f));
     } while (src_bytes > src_bytes_end);
-
     return out;
 }
 

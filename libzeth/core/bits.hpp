@@ -29,6 +29,24 @@ bits64 bits64_from_hex(const std::string &hex_str);
 
 std::vector<bool> bits64_to_vector(const bits64 &arr);
 
+/// Array of 128 bits
+using bits128 = std::array<bool, 128>;
+
+bits128 bits128_from_vector(const std::vector<bool> &vect);
+
+bits128 bits128_from_hex(const std::string &hex_str);
+
+std::vector<bool> bits128_to_vector(const bits128 &arr);
+
+/// Array of 254 bits
+using bits254 = std::array<bool, 254>;
+
+bits254 bits254_from_vector(const std::vector<bool> &vect);
+
+bits254 bits254_from_hex(const std::string &hex_str);
+
+std::vector<bool> bits254_to_vector(const bits254 &arr);
+
 /// Array of 256 bits
 using bits256 = std::array<bool, 256>;
 
@@ -83,6 +101,9 @@ std::array<bool, BitLen> bits_add(
 /// Takes a hexadecimal string and converts it into a bit-vector. Throws an
 /// exception if called with an invalid hexadecimal string.
 std::vector<bool> bit_vector_from_hex(const std::string &str);
+
+// Takes a hexadecimal string and converts it into a bit-vector and delete several zero element in the begin.
+std::vector<bool> bit_vector_254_from_hex(const std::string &hex_str);
 
 // Returns the little endian binary encoding of the integer x.
 std::vector<bool> bit_vector_from_size_t_le(size_t x);

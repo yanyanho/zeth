@@ -9,7 +9,7 @@
 
 namespace libzeth
 {
-
+/*
 template<typename FieldT>
 note_gadget<FieldT>::note_gadget(
     libsnark::protoboard<FieldT> &pb, const std::string &annotation_prefix)
@@ -24,10 +24,11 @@ note_gadget<FieldT>::note_gadget(
         ZETH_R_SIZE,
         FMT(this->annotation_prefix, " r")); // ZETH_R_SIZE = 256
 }
-
+*/
+/*
 template<typename FieldT> void note_gadget<FieldT>::generate_r1cs_constraints()
 {
-    /*
+
     for (size_t i = 0; i < ZETH_V_SIZE; i++) {
         libsnark::generate_boolean_r1cs_constraint<FieldT>(
             this->pb, value[i], FMT(this->annotation_prefix, " value[%zu]", i));
@@ -37,16 +38,18 @@ template<typename FieldT> void note_gadget<FieldT>::generate_r1cs_constraints()
         libsnark::generate_boolean_r1cs_constraint<FieldT>(
             this->pb, r[i], FMT(this->annotation_prefix, " r[%zu]", i));
     }
-     */
-}
 
+
+}
+*/
+/*
 template<typename FieldT>
 void note_gadget<FieldT>::generate_r1cs_witness(const zeth_note &note)
 {
-    r.fill_with_bits(this->pb, bits256_to_vector(note.r));
-    value.fill_with_bits(this->pb, bits64_to_vector(note.value));
+    //r.fill_with_bits(this->pb, bits254_to_vector(note.r));
+    //value.fill_with_bits(this->pb, bits64_to_vector(note.value));
 }
-
+*/
 // Gadget that makes sure that all conditions are met in order to spend a note:
 // - The nullifier is correctly computed from a_sk and rho
 // - The commitment cm is correctly computed from the coin's data
@@ -57,12 +60,14 @@ input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::input_note_gadget(
     const libsnark::pb_variable<FieldT> &ZERO,
     std::shared_ptr<libsnark::digest_variable<FieldT>> a_sk,
     std::shared_ptr<libsnark::digest_variable<FieldT>> nullifier,
+    std::shared_ptr<libsnark::digest_variable<FieldT>> rho,
     const libsnark::pb_variable<FieldT> &rt,
+    const zeth_note &note,
     const std::string &annotation_prefix)
-    : note_gadget<FieldT>(pb, annotation_prefix)
+    : libsnark::gadget<FieldT>(pb, annotation_prefix)
 {
     // ZETH_RHO_SIZE = 256
-    rho.allocate(pb, ZETH_RHO_SIZE, " rho");
+    //rho.allocate(pb, ZETH_RHO_SIZE, " rho");
     address_bits_va.allocate(
         pb, TreeDepth, FMT(this->annotation_prefix, " merkle_tree_depth"));
     a_pk.reset(new libsnark::digest_variable<FieldT>(
@@ -83,7 +88,7 @@ input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::input_note_gadget(
     // Call to the "PRF_nf_gadget" to make sure the nullifier is correctly
     // computed from a_sk and rho
     expose_nullifiers.reset(
-        new PRF_nf_gadget<FieldT, HashT>(pb, ZERO, a_sk->bits, rho, nullifier));
+        new PRF_nf_gadget<FieldT, HashT>(pb, ZERO, a_sk->bits, rho->bits, nullifier));
 
     // Below this point, we need to do several calls
     // to the commitment gagdets.
@@ -106,8 +111,18 @@ input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::input_note_gadget(
     // this step provides an additional layer of obfuscation and minimizes the
     // interactions with the mixer (that we know affect the public state and
     // leak data)).
+    value.allocate(
+            pb,
+            ZETH_V_SIZE,
+            FMT(this->annotation_prefix, " value")); // ZETH_V_SIZE = 64
+    r.allocate(
+            pb,
+            ZETH_R_SIZE,
+            FMT(this->annotation_prefix, " r")); // ZETH_R_SIZE = 256
+    r.fill_with_bits(this->pb, bits254_to_vector(note.r));
+    value.fill_with_bits(this->pb, bits64_to_vector(note.value));
     commit_to_inputs_cm.reset(new COMM_cm_gadget<FieldT, HashT>(
-        pb, a_pk->bits, rho, this->r, this->value, commitment));
+        pb, a_pk->bits, rho->bits, r, value, commitment));
 
     // We do not forget to allocate the `value_enforce` variable
     // since it is submitted to boolean constraints
@@ -136,7 +151,7 @@ void input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::
     generate_r1cs_constraints()
 {
     // Generate constraints of parent gadget
-    note_gadget<FieldT>::generate_r1cs_constraints();
+    //note_gadget<FieldT>::generate_r1cs_constraints();
 
     // Generate the constraints for the rho 256-bit string
     /*
@@ -146,8 +161,12 @@ void input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::
     }
      */
 
+    std::cout << "enter PRF_addr_a_pk_gadget" << std::endl;
+
     spend_authority->generate_r1cs_constraints();
+    std::cout << "enter PRF_nf_gadget" << std::endl;
     expose_nullifiers->generate_r1cs_constraints();
+    std::cout << "enter COMM_cm_gadget" << std::endl;
     commit_to_inputs_cm->generate_r1cs_constraints();
     // value * (1 - enforce) = 0
     // Given `enforce` is boolean constrained:
@@ -176,17 +195,20 @@ void input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::
         const zeth_note &note)
 {
     // Generate witness of parent gadget
-    note_gadget<FieldT>::generate_r1cs_witness(note);
+    //note_gadget<FieldT>::generate_r1cs_witness(note);
 
     // Witness a_pk for a_sk with PRF_addr
+    std::cout << "Witness PRF_addr_a_pk_gadget" << std::endl;
     spend_authority->generate_r1cs_witness();
 
     // Witness rho for the input note
-    rho.fill_with_bits(this->pb, bits256_to_vector(note.rho));
+    //rho.fill_with_bits(this->pb, bits254_to_vector(note.rho));
     // Witness the nullifier for the input note
+    std::cout << "Witness PRF_nf_gadget" << std::endl;
     expose_nullifiers->generate_r1cs_witness();
 
     // Witness the commitment of the input note
+    std::cout << "Witness COMM_cm_gadget" << std::endl;
     commit_to_inputs_cm->generate_r1cs_witness();
 
     // Set enforce flag for nonzero input value
@@ -279,22 +301,33 @@ output_note_gadget<FieldT, HashT>::output_note_gadget(
     libsnark::protoboard<FieldT> &pb,
     std::shared_ptr<libsnark::digest_variable<FieldT>> rho,
     const libsnark::pb_variable<FieldT> &commitment,
+    const zeth_note &note,
     const std::string &annotation_prefix)
-    : note_gadget<FieldT>(pb, annotation_prefix)
+    : libsnark::gadget<FieldT>(pb, annotation_prefix)
 {
     a_pk.reset(new libsnark::digest_variable<FieldT>(
         pb, HashT::get_digest_len(), FMT(this->annotation_prefix, " a_pk")));
-
+    a_pk->bits.fill_with_bits(pb, bits254_to_vector(note.a_pk));
     // Commit to the output notes publicly without disclosing them.
+    value.allocate(
+            pb,
+            ZETH_V_SIZE,
+            FMT(this->annotation_prefix, " value")); // ZETH_V_SIZE = 64
+    r.allocate(
+            pb,
+            ZETH_R_SIZE,
+            FMT(this->annotation_prefix, " r")); // ZETH_R_SIZE = 256
+    r.fill_with_bits(pb, bits254_to_vector(note.r));
+    value.fill_with_bits(pb, bits64_to_vector(note.value));
     commit_to_outputs_cm.reset(new COMM_cm_gadget<FieldT, HashT>(
-        pb, a_pk->bits, rho->bits, this->r, this->value, commitment));
+            pb, a_pk->bits, rho->bits, r, value, commitment));
 }
 
 template<typename FieldT, typename HashT>
 void output_note_gadget<FieldT, HashT>::generate_r1cs_constraints()
 {
     // Generate constraints of the parent gadget
-    note_gadget<FieldT>::generate_r1cs_constraints();
+    //note_gadget<FieldT>::generate_r1cs_constraints();
 
     a_pk->generate_r1cs_constraints();
     commit_to_outputs_cm->generate_r1cs_constraints();
@@ -305,10 +338,10 @@ void output_note_gadget<FieldT, HashT>::generate_r1cs_witness(
     const zeth_note &note)
 {
     // Generate witness of the parent gadget
-    note_gadget<FieldT>::generate_r1cs_witness(note);
+    //note_gadget<FieldT>::generate_r1cs_witness(note);
 
     // Witness a_pk with note information
-    a_pk->bits.fill_with_bits(this->pb, bits256_to_vector(note.a_pk));
+    //a_pk->bits.fill_with_bits(this->pb, bits254_to_vector(note.a_pk));
 
     commit_to_outputs_cm->generate_r1cs_witness();
 }

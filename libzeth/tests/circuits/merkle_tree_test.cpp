@@ -5,7 +5,8 @@
 #include "libzeth/circuits/circuit_types.hpp"
 #include "libzeth/circuits/merkle_tree/merkle_path_authenticator.hpp"
 #include "libzeth/circuits/merkle_tree/merkle_path_selector.hpp"
-#include "libzeth/circuits/mimc/mimc_mp.hpp"
+//#include "libzeth/circuits/mimc/mimc_mp.hpp"
+#include "libzeth/circuits/poseidon/poseidon.hpp"
 
 #include "gtest/gtest.h"
 
@@ -14,7 +15,7 @@ using namespace libzeth;
 // Instantiation of the templates for the tests
 typedef libzeth::ppT ppT;
 typedef libff::Fr<ppT> FieldT;
-typedef MiMC_mp_gadget<FieldT> HashTreeT;
+typedef Poseidon128<2,1,FieldT> HashTreeT;
 
 namespace
 {
@@ -82,12 +83,9 @@ bool test_merkle_path_authenticator_depth1()
     // 134551314051432487569247388144051420116740427803855572138106146683954151557,
     // root:
     // 7121700468981037559893852455893095765125417767594185027454590493596569372187
-    FieldT left = FieldT("37031414935355631796575317199601601742960852086719193"
-                         "16200479060314459804651");
-    FieldT right = FieldT("1345513140514324875692473881440514201167404278038555"
-                          "72138106146683954151557");
-    FieldT root = FieldT("71217004689810375598938524558930957651254177675941850"
-                         "27454590493596569372187");
+    FieldT left = FieldT("1");
+    FieldT right = FieldT("2");
+    FieldT root = FieldT("12242166908188651009877250812424843524687801523336557272219921456462821518061");
 
     // Set the authenticator for right leaf (`is_right` = 1)
     FieldT is_right = 1;
@@ -164,8 +162,7 @@ bool test_merkle_path_authenticator_depth3()
                           "3374630310875272509334396");
     FieldT left2 = FieldT("9881790034808292405036271961589462686158587796044671"
                           "417688221824074647491645");
-    FieldT root = FieldT("13476730430097836153970274382710787532919044453117948"
-                         "373701924629587143655224");
+    FieldT root = FieldT("3275830280523569532520067071141304538674765499460331840052643194229420791524");
     FieldT is_right = 1;
 
     // Bit representation of the leaf to authenticate

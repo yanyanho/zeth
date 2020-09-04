@@ -436,7 +436,10 @@ public:
 
         return pb.val(hasher.result());
     }
-
+    static size_t get_digest_len()
+    {
+        return 254;
+    }
 	Poseidon_gadget_T(
             libsnark::protoboard<FieldT> &pb,
 		//const libsnark::pb_variable_array<FieldT> in_inputs,
@@ -534,7 +537,6 @@ public:
 		for( auto& prefix_round : prefix_full_rounds ) {
 			prefix_round.generate_r1cs_witness();
 		}
-
 		for( auto& partial_round : partial_rounds ) {
 			partial_round.generate_r1cs_witness();
 		}
@@ -566,3 +568,4 @@ using Poseidon128 = Poseidon_gadget_T<6, 1, 8, 57, nInputs, nOutputs, FieldT, co
 }
 
 #endif
+

@@ -41,6 +41,7 @@ static void serialize_setup_to_file(
     const boost::filesystem::path path_vk_json = setup_path / "vk.json";
     const boost::filesystem::path path_vk_raw = setup_path / "vk.raw";
     const boost::filesystem::path path_pk_raw = setup_path / "pk.raw";
+    const boost::filesystem::path path_keypair = "/home/zeth/build/keypair";
 
     const typename snark::ProvingKeyT &proving_key = keypair.pk;
     const typename snark::VerificationKeyT &verification_key = keypair.vk;
@@ -59,6 +60,10 @@ static void serialize_setup_to_file(
     {
         std::ofstream pk_bytes_s(path_pk_raw.c_str());
         snark::proving_key_write_bytes(proving_key, pk_bytes_s);
+    }
+    {
+        std::ofstream keypair_bytes(path_keypair.c_str());
+        snark::keypair_write_bytes(keypair_bytes, keypair);
     }
 }
 
@@ -163,10 +168,10 @@ public:
                 libzeth::bits64_from_hex(proof_inputs->pub_in_value());
             libzeth::bits64 vpub_out =
                 libzeth::bits64_from_hex(proof_inputs->pub_out_value());
-            libzeth::bits256 h_sig_in =
-                libzeth::bits256_from_hex(proof_inputs->h_sig());
-            libzeth::bits256 phi_in =
-                libzeth::bits256_from_hex(proof_inputs->phi());
+            libzeth::bits254 h_sig_in =
+                libzeth::bits254_from_hex(proof_inputs->h_sig());
+            libzeth::bits254 phi_in =
+                libzeth::bits254_from_hex(proof_inputs->phi());
 
             if (libzeth::ZETH_NUM_JS_INPUTS != proof_inputs->js_inputs_size()) {
                 throw std::invalid_argument("Invalid number of JS inputs");

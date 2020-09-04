@@ -21,11 +21,13 @@ template<typename FieldT, typename HashT>
 class PRF_gadget : public libsnark::gadget<FieldT>
 {
 private:
-    std::shared_ptr<libsnark::block_variable<FieldT>> block;
+    //std::shared_ptr<libsnark::block_variable<FieldT>> block;
     std::shared_ptr<HashT> hasher; // Hash gadget used as a prf
-    std::shared_ptr<libsnark::digest_variable<FieldT>> result;
 
 public:
+    libsnark::pb_variable<FieldT> left;
+    libsnark::pb_variable<FieldT> right;
+    std::shared_ptr<libsnark::digest_variable<FieldT>> result;
     PRF_gadget(
         libsnark::protoboard<FieldT> &pb,
         const libsnark::pb_variable_array<FieldT> &x,
@@ -47,22 +49,26 @@ libsnark::pb_variable_array<FieldT> gen_256_zeroes(
 
 template<typename FieldT>
 libsnark::pb_variable_array<FieldT> get_tag_addr(
+        libsnark::protoboard<FieldT> &pb,
     const libsnark::pb_variable<FieldT> &ZERO,
     const libsnark::pb_variable_array<FieldT> &x);
 
 template<typename FieldT>
 libsnark::pb_variable_array<FieldT> get_tag_nf(
+        libsnark::protoboard<FieldT> &pb,
     const libsnark::pb_variable<FieldT> &ZERO,
     const libsnark::pb_variable_array<FieldT> &a_sk);
 
 template<typename FieldT>
 libsnark::pb_variable_array<FieldT> get_tag_pk(
+        libsnark::protoboard<FieldT> &pb,
     const libsnark::pb_variable<FieldT> &ZERO,
     const libsnark::pb_variable_array<FieldT> &a_sk,
     size_t index);
 
 template<typename FieldT>
 libsnark::pb_variable_array<FieldT> get_tag_rho(
+        libsnark::protoboard<FieldT> &pb,
     const libsnark::pb_variable<FieldT> &ZERO,
     const libsnark::pb_variable_array<FieldT> &phi,
     size_t index);

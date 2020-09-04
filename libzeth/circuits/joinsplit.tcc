@@ -26,16 +26,17 @@ template<
 class joinsplit_gadget : libsnark::gadget<FieldT>
 {
 private:
+    /*
     const size_t digest_len_minus_field_cap =
-        subtract_with_clamp(HashT::get_digest_len(), FieldT::capacity());
-
+        subtract_with_clamp(HashT::get_digest_len(), 254);
+    */
     // Number of residual bits from packing of hash digests into smaller
     // field elements to which are added the public value of size 64 bits
     const size_t length_bit_residual =
-        2 * ZETH_V_SIZE + digest_len_minus_field_cap * (1 + 2 * NumInputs);
+        2 * ZETH_V_SIZE;
     // Number of field elements needed to pack this number of bits
     const size_t nb_field_residual =
-        libff::div_ceil(length_bit_residual, FieldT::capacity());
+        libff::div_ceil(length_bit_residual, 254);
 
     // Multipacking gadgets for the inputs (nullifierS, hsig, message
     // authentication tags (h_is) and the residual bits (comprising the
@@ -88,6 +89,9 @@ private:
     // List of all spending keys
     std::array<std::shared_ptr<libsnark::digest_variable<FieldT>>, NumInputs>
         a_sks;
+    // List of all input rhos
+    std::array<std::shared_ptr<libsnark::digest_variable<FieldT>>, NumInputs>
+        rhos;
     // List of all output rhos
     std::array<std::shared_ptr<libsnark::digest_variable<FieldT>>, NumOutputs>
         rho_is;
@@ -120,6 +124,13 @@ public:
     // the verifier on-chain
     joinsplit_gadget(
         libsnark::protoboard<FieldT> &pb,
+        const std::array<FieldT, NumInputs> &rt,
+        const std::array<joinsplit_input<FieldT, TreeDepth>, NumInputs> &inputs,
+        const std::array<zeth_note, NumOutputs> &outputs,
+        bits64 vpub_in,
+        bits64 vpub_out,
+        const bits254 h_sig_in,
+        const bits254 phi_in,
         const std::string &annotation_prefix = "joinsplit_gadget")
         : libsnark::gadget<FieldT>(pb, annotation_prefix)
     {
@@ -146,7 +157,11 @@ public:
             //   + 1, 2 + NumInputs + NumOutputs + NumInputs[
             // - Index of the "Residual field element(S)", ie "v_pub_in",
             //   "v_pub_out", and bits of previous variables not fitting within
+
+            //   254 [2 + NumInputs + NumOutputs + NumInputs,
+
             //   FieldT::capacity() [2 + NumInputs + NumOutputs + NumInputs,
+
             //   2 + NumInputs + NumOutputs + NumInputs + nb_field_residual[
 
             // We first allocate the root
@@ -156,10 +171,17 @@ public:
                 pb, FMT(this->annotation_prefix, " merkle_root"));
             */
             merkle_roots.allocate(pb, NumInputs, " merkle_roots");
+
+            // Witness the merkle root
+            for (size_t i = 0; i < NumInputs; i++) {
+                this->pb.val(merkle_roots[i]) = rt[i];
+            }
+
+
             output_commitments.allocate(pb, NumOutputs, " output_commitments");
 
             // We allocate a field element for each of the input nullifiers
-            // to pack their first FieldT::capacity() bits
+            // to pack their first 254 bits
             for (size_t i = 0; i < NumInputs; i++) {
                 packed_inputs[i].allocate(
                     pb,
@@ -168,12 +190,12 @@ public:
             }
 
             // We allocate a field element for h_sig to pack its first
-            // FieldT::capacity() bits
+            // 254 bits
             packed_inputs[NumInputs].allocate(
                 pb, 1, FMT(this->annotation_prefix, " h_sig"));
 
             // We allocate a field element for each message authentication tags
-            // h_iS to pack their first FieldT::capacity() bits
+            // h_iS to pack their first 254 bits
             for (size_t i = NumInputs + 1; i < NumInputs + 1 + NumInputs; i++) {
                 packed_inputs[i].allocate(
                     pb, 1, FMT(this->annotation_prefix, " h_i[%zu]", i));
@@ -201,12 +223,22 @@ public:
             // ---------------------------------------------------------------
 
             ZERO.allocate(pb, FMT(this->annotation_prefix, " ZERO"));
+            // Witness `zero`
+            this->pb.val(ZERO) = FieldT::zero();
 
             // Initialize the digest_variables
             phi.reset(new libsnark::digest_variable<FieldT>(
                 pb, ZETH_PHI_SIZE, FMT(this->annotation_prefix, " phi")));
+            // Witness phi
+            phi->generate_r1cs_witness(
+                    libff::bit_vector(bits254_to_vector(phi_in)));
+
             h_sig.reset(new libsnark::digest_variable<FieldT>(
                 pb, ZETH_HSIG_SIZE, FMT(this->annotation_prefix, " h_sig")));
+            // Witness h_sig
+            h_sig->generate_r1cs_witness(
+                    libff::bit_vector(bits254_to_vector(h_sig_in)));
+
             for (size_t i = 0; i < NumInputs; i++) {
                 input_nullifiers[i].reset(new libsnark::digest_variable<FieldT>(
                     pb,
@@ -216,11 +248,24 @@ public:
                     pb,
                     ZETH_A_SK_SIZE,
                     FMT(this->annotation_prefix, " a_sks[%zu]", i)));
+                rhos[i].reset(new libsnark::digest_variable<FieldT>(
+                        pb,
+                        ZETH_RHO_SIZE,
+                        FMT(this->annotation_prefix, " rhos[%zu]", i)));
                 h_is[i].reset(new libsnark::digest_variable<FieldT>(
                     pb,
                     HashT::get_digest_len(),
                     FMT(this->annotation_prefix, " h_is[%zu]", i)));
             }
+
+            // Witness the h_iS, a_sk and rho_iS
+            for (size_t i = 0; i < NumInputs; i++) {
+                a_sks[i]->generate_r1cs_witness(libff::bit_vector(
+                        bits254_to_vector(inputs[i].spending_key_a_sk)));
+                rhos[i]->generate_r1cs_witness(libff::bit_vector(
+                        bits254_to_vector(inputs[i].note.rho)));
+            }
+
             for (size_t i = 0; i < NumOutputs; i++) {
                 rho_is[i].reset(new libsnark::digest_variable<FieldT>(
                     pb,
@@ -233,21 +278,24 @@ public:
                 pb, ZETH_V_SIZE, FMT(this->annotation_prefix, " zk_vpub_in"));
             zk_vpub_out.allocate(
                 pb, ZETH_V_SIZE, FMT(this->annotation_prefix, " zk_vpub_out"));
+            // Witness LHS public value
+            zk_vpub_in.fill_with_bits(this->pb, bits64_to_vector(vpub_in));
+            // Witness RHS public value
+            zk_vpub_out.fill_with_bits(this->pb, bits64_to_vector(vpub_out));
 
             // Initialize the unpacked input corresponding to the input
             // NullifierS
             for (size_t i = 0; i < NumInputs; i++) {
                 unpacked_inputs[i].insert(
                     unpacked_inputs[i].end(),
-                    input_nullifiers[i]->bits.rbegin() +
-                        digest_len_minus_field_cap,
+                    input_nullifiers[i]->bits.rbegin(),
                     input_nullifiers[i]->bits.rend());
             }
 
             // Initialize the unpacked input corresponding to the h_sig
             unpacked_inputs[NumInputs].insert(
                 unpacked_inputs[NumInputs].end(),
-                h_sig->bits.rbegin() + digest_len_minus_field_cap,
+                h_sig->bits.rbegin(),
                 h_sig->bits.rend());
 
             // Initialize the unpacked input corresponding to the h_is
@@ -256,12 +304,12 @@ public:
                  i++, j++) {
                 unpacked_inputs[i].insert(
                     unpacked_inputs[i].end(),
-                    h_is[j]->bits.rbegin() + digest_len_minus_field_cap,
+                    h_is[j]->bits.rbegin(),
                     h_is[j]->bits.rend());
             }
 
             // Initialize the unpacked input corresponding to the variables of
-            // size different to 253 (FieldT::capacity()) bits (smaller inputs
+            // size different to 254 (254) bits (smaller inputs
             // and residual bits). We obtain an unpacked value equal to v_in ||
             // v_out || h_sig || nf_{1..NumInputs} || h_i_{1..NumInput}.
             // We fill them here in reverse order because of the use of
@@ -269,6 +317,7 @@ public:
             // given position
             {
                 // Filling with the residual bits of the h_is
+                /*
                 for (size_t i = 0; i < NumInputs; i++) {
                     unpacked_inputs[NumInputs + 1 + NumInputs].insert(
                         unpacked_inputs[NumInputs + 1 + NumInputs].end(),
@@ -291,7 +340,7 @@ public:
                     unpacked_inputs[NumInputs + 1 + NumInputs].end(),
                     h_sig->bits.rbegin(),
                     h_sig->bits.rbegin() + digest_len_minus_field_cap);
-
+                */
                 // Filling with the vpub_out (public value taken out of the mix)
                 unpacked_inputs[NumInputs + 1 + NumInputs].insert(
                     unpacked_inputs[NumInputs + 1 + NumInputs].end(),
@@ -338,7 +387,7 @@ public:
                     pb,
                     unpacked_inputs[i],
                     packed_inputs[i],
-                    FieldT::capacity(),
+                    254,
                     FMT(this->annotation_prefix,
                         " packer_nullifiers[%zu]",
                         i)));
@@ -349,7 +398,7 @@ public:
                 pb,
                 unpacked_inputs[NumInputs],
                 packed_inputs[NumInputs],
-                FieldT::capacity(),
+                254,
                 FMT(this->annotation_prefix, " packer_h_sig")));
 
             // 3. Pack the h_iS
@@ -358,7 +407,7 @@ public:
                     pb,
                     unpacked_inputs[i],
                     packed_inputs[i],
-                    FieldT::capacity(),
+                    254,
                     FMT(this->annotation_prefix, " packer_h_i[%zu]", i)));
             }
 
@@ -368,7 +417,7 @@ public:
                     pb,
                     unpacked_inputs[NumInputs + 1 + NumInputs],
                     packed_inputs[NumInputs + 1 + NumInputs],
-                    FieldT::capacity(),
+                    254,
                     FMT(this->annotation_prefix, " packer_residual_bits")));
 
         } // End of the block dedicated to generate the verifier inputs
@@ -381,10 +430,22 @@ public:
         for (size_t i = 0; i < NumInputs; i++) {
             input_notes[i].reset(
                 new input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>(
-                    pb, ZERO, a_sks[i], input_nullifiers[i], merkle_roots[i]));
+            pb, ZERO, a_sks[i], input_nullifiers[i], rhos[i], merkle_roots[i], inputs[i].note));
+            std::cout << "rhos: " << std::endl;
+            rhos[i]->bits.get_field_element_from_bits(pb).print();
 
             h_i_gadgets[i].reset(new PRF_pk_gadget<FieldT, HashT>(
                 pb, ZERO, a_sks[i]->bits, h_sig->bits, i, h_is[i]));
+        }
+        // Witness the JoinSplit inputs and the h_is
+        for (size_t i = 0; i < NumInputs; i++) {
+            std::vector<FieldT> merkle_path = inputs[i].witness_merkle_path;
+            libff::bit_vector address_bits =
+                    bits_addr_to_vector(inputs[i].address_bits);
+            input_notes[i]->generate_r1cs_witness(
+                    merkle_path, address_bits, inputs[i].note);
+            std::cout << "here: " << std::endl;
+            h_i_gadgets[i]->generate_r1cs_witness();
         }
 
         // Ouput note gadgets for commitments as well as PRF gadgets for the
@@ -394,7 +455,12 @@ public:
                 pb, ZERO, phi->bits, h_sig->bits, i, rho_is[i]));
 
             output_notes[i].reset(new output_note_gadget<FieldT, HashT>(
-                pb, rho_is[i], output_commitments[i]));
+                pb, rho_is[i], output_commitments[i], outputs[i]));
+        }
+        // Witness the JoinSplit outputs
+        for (size_t i = 0; i < NumOutputs; i++) {
+            rho_i_gadgets[i]->generate_r1cs_witness();
+            output_notes[i]->generate_r1cs_witness(outputs[i]);
         }
     }
 
@@ -419,6 +485,7 @@ public:
         phi->generate_r1cs_constraints();
         for (size_t i = 0; i < NumInputs; i++) {
             a_sks[i]->generate_r1cs_constraints();
+            rhos[i]->generate_r1cs_constraints();
         }
 
         // Constrain `ZERO`: Make sure that the ZERO variable is the zero of the
@@ -486,9 +553,10 @@ public:
         const std::array<zeth_note, NumOutputs> &outputs,
         bits64 vpub_in,
         bits64 vpub_out,
-        const bits256 h_sig_in,
-        const bits256 phi_in)
+        const bits254 h_sig_in,
+        const bits254 phi_in)
     {
+        /*
         // Witness `zero`
         this->pb.val(ZERO) = FieldT::zero();
 
@@ -508,18 +576,20 @@ public:
 
         // Witness h_sig
         h_sig->generate_r1cs_witness(
-            libff::bit_vector(bits256_to_vector(h_sig_in)));
+            libff::bit_vector(bits254_to_vector(h_sig_in)));
 
         // Witness the h_iS, a_sk and rho_iS
         for (size_t i = 0; i < NumInputs; i++) {
             a_sks[i]->generate_r1cs_witness(libff::bit_vector(
-                bits256_to_vector(inputs[i].spending_key_a_sk)));
+                bits254_to_vector(inputs[i].spending_key_a_sk)));
+            rhos[i]->generate_r1cs_witness(libff::bit_vector(
+                    bits254_to_vector(inputs[i].note.rho)));
         }
 
         // Witness phi
         phi->generate_r1cs_witness(
-            libff::bit_vector(bits256_to_vector(phi_in)));
-
+            libff::bit_vector(bits254_to_vector(phi_in)));
+        */
         {
             // Witness total_uint64 bits
             // We add binary numbers here see:
@@ -534,7 +604,7 @@ public:
             zk_total_uint64.fill_with_bits(
                 this->pb, bits64_to_vector(left_side_acc));
         }
-
+        /*
         // Witness the JoinSplit inputs and the h_is
         for (size_t i = 0; i < NumInputs; i++) {
             std::vector<FieldT> merkle_path = inputs[i].witness_merkle_path;
@@ -551,7 +621,7 @@ public:
             rho_i_gadgets[i]->generate_r1cs_witness();
             output_notes[i]->generate_r1cs_witness(outputs[i]);
         }
-
+        */
         // This happens last, because only by now are all the
         // verifier inputs resolved.
         for (size_t i = 0; i < packers.size(); i++) {
@@ -565,11 +635,11 @@ public:
         size_t acc = 0;
 
         // Bit-length of the Merkle Root
-        acc += FieldT::capacity();
+        acc += 254;
 
         // Bit-length of the CommitmentS
         for (size_t i = 0; i < NumOutputs; i++) {
-            acc += FieldT::capacity();
+            acc += 254;
         }
 
         // Bit-length of the NullifierS
@@ -600,7 +670,7 @@ public:
         // The Merkle root and commitments are not in the `unpacked_inputs`
         // so we subtract their bit-length to get the total bit-length of
         // the primary inputs in `unpacked_inputs`
-        return get_inputs_bit_size() - (1 + NumOutputs) * FieldT::capacity();
+        return get_inputs_bit_size() - (1 + NumOutputs) * 254;
     }
 
     // Computes the number of field elements in the primary inputs
@@ -609,29 +679,29 @@ public:
         size_t nb_elements = 0;
 
         // The merkle root is represented by 1 field element (bit_length(root) =
-        // FieldT::capacity())
+        // 254)
         nb_elements += 1;
 
         // Each commitment is represented by 1 field element (bit_length(cm) =
-        // FieldT::capacity())
+        // 254)
         for (size_t i = 0; i < NumOutputs; i++) {
             nb_elements += 1;
         }
 
         // Each nullifier is represented by 1 field element and
-        // (HashT::get_digest_len() - FieldT::capacity()) bits we aggregate in
+        // (HashT::get_digest_len() - 254) bits we aggregate in
         // the residual field element(s) later on (c.f. last incrementation)
         for (size_t i = 0; i < NumInputs; i++) {
             nb_elements += 1;
         }
 
         // The h_sig is represented 1 field element and (HashT::get_digest_len()
-        // - FieldT::capacity()) bits we aggregate in the residual field
+        // - 254) bits we aggregate in the residual field
         // element(s) later on (c.f. last incrementation)
         nb_elements += 1;
 
         // Each authentication tag is represented by 1 field element and
-        // (HashT::get_digest_len() - FieldT::capacity()) bits we aggregate in
+        // (HashT::get_digest_len() - 254) bits we aggregate in
         // the residual field element(s) later on (c.f. last incrementation)
         for (size_t i = 0; i < NumInputs; i++) {
             nb_elements += 1;
@@ -640,10 +710,8 @@ public:
         // Residual bits and public values (in and out) aggregated in
         // `nb_field_residual` field elements
         nb_elements += libff::div_ceil(
-            2 * ZETH_V_SIZE + subtract_with_clamp(
-                                  HashT::get_digest_len(), FieldT::capacity()) *
-                                  (1 + 2 * NumInputs),
-            FieldT::capacity());
+            2 * ZETH_V_SIZE,
+            254);
 
         return nb_elements;
     }

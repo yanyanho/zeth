@@ -7,9 +7,9 @@
 
 #include "libzeth/circuits/blake2s/blake2s.hpp"
 #include "libzeth/circuits/circuit_wrapper.hpp"
-#include "libzeth/circuits/mimc/mimc_mp.hpp"
+//#include "libzeth/circuits/mimc/mimc_mp.hpp"
 #include "libzeth/core/include_libsnark.hpp"
-
+#include "libzeth/circuits/poseidon/poseidon.hpp"
 // Types that must be common across all executable, defined once here. Outside
 // of tests, these should not be set anywhere else in the code. Do not include
 // this file in code that is generic (parameterized on ppT or FieldT).
@@ -24,11 +24,11 @@ using ppT = libff::default_ec_pp;
 using FieldT = libff::Fr<ppT>;
 
 // Hash used for the commitments and PRFs
-using HashT = BLAKE2s_256<FieldT>;
-
+//using HashT = BLAKE2s_256<FieldT>;
+using HashT = Poseidon128<2,1,FieldT>;
 // Hash function to be used in the Merkle Tree
-using HashTreeT = MiMC_mp_gadget<FieldT>;
-
+//using HashTreeT = MiMC_mp_gadget<FieldT>;
+using HashTreeT = Poseidon128<2,1,FieldT>;
 } // namespace libzeth
 
 #endif // __ZETH_CIRCUITS_CIRCUIT_TYPES_HPP__

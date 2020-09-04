@@ -9,7 +9,7 @@
 #include "libzeth/core/extended_proof.hpp"
 #include "libzeth/core/note.hpp"
 #include "libzeth/zeth_constants.hpp"
-
+#include "libzeth/core/bits.hpp"
 namespace libzeth
 {
 
@@ -53,8 +53,8 @@ public:
         const std::array<zeth_note, NumOutputs> &outputs,
         const bits64 &vpub_in,
         const bits64 &vpub_out,
-        const bits256 &h_sig_in,
-        const bits256 &phi_in,
+        const bits254 &h_sig_in,
+        const bits254 &phi_in,
         const typename snarkT::ProvingKeyT &proving_key) const;
 };
 

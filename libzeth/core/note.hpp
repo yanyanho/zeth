@@ -15,12 +15,12 @@ namespace libzeth
 class zeth_note
 {
 public:
-    bits256 a_pk;
+    bits254 a_pk;
     bits64 value;
-    bits256 rho;
-    bits256 r;
+    bits254 rho;
+    bits254 r;
 
-    zeth_note(bits256 a_pk, bits64 value, bits256 rho, bits256 r)
+    zeth_note(bits254 a_pk, bits64 value, bits254 rho, bits254 r)
         : a_pk(a_pk), value(value), rho(rho), r(r)
     {
     }
