@@ -31,14 +31,21 @@ PRF_gadget<FieldT, HashT>::PRF_gadget(
     hasher.reset(new HashT(
         pb, *block, *result, FMT(this->annotation_prefix, " hasher_gadget")));
          */
+    reverse_x.allocate(pb, 254, "reverse_x");
+    reverse_y.allocate(pb, 254, "reverse_y");
     left.allocate(pb, "left");
     right.allocate(pb, "right");
-    this->pb.val(left) = x.get_field_element_from_bits(pb);
+    for (int i = 0; i < 254; i++)
+    {
+        pb.val(reverse_x[i]) = pb.val(x[254-1-i]);
+        pb.val(reverse_y[i]) = pb.val(y[254-1-i]);
+    }
+    this->pb.val(left) = reverse_x.get_field_element_from_bits(pb);
     std::cout << "left: " << std::endl;
-    x.get_field_element_from_bits(pb).print();
-    this->pb.val(right) = y.get_field_element_from_bits(pb);
+    this->pb.val(left).print();
+    this->pb.val(right) = reverse_y.get_field_element_from_bits(pb);
     std::cout << "right: " << std::endl;
-    y.get_field_element_from_bits(pb).print();
+    this->pb.val(right).print();
     hasher.reset(new HashT(
             pb, left, right, FMT(this->annotation_prefix, " hasher_gadget")));
 }
@@ -64,14 +71,9 @@ void PRF_gadget<FieldT, HashT>::generate_r1cs_witness()
     hasher->generate_r1cs_witness();
     std::cout << "hash result: " << std::endl;
     this->pb.val(hasher->result()).print();
-    std::cout << "x in hasher: " << std::endl;
-    this->pb.val(hasher->x).print();
-    std::cout << "y in hasher: " << std::endl;
-    this->pb.val(hasher->y).print();
     std::cout << "hex: " << field_element_to_hex(this->pb.val(hasher->result())) << std::endl;
     result->generate_r1cs_witness(libff::bit_vector(
             bits254_to_vector(bits254_from_hex(field_element_to_hex(this->pb.val(hasher->result()))))));
-    std::cout << "**********: " << std::endl;
 }
 
 template<typename FieldT, typename HashT>
@@ -99,7 +101,7 @@ libsnark::pb_variable_array<FieldT> get_tag_addr(
 {
     libsnark::pb_variable_array<FieldT> tagged_a_sk;
     tagged_a_sk.emplace_back(ZERO);  // 0
-    tagged_a_sk.emplace_back(ZERO);  // 10
+    tagged_a_sk.emplace_back(ZERO);  // 00
     tagged_a_sk.emplace_back(ONE); // 001
     tagged_a_sk.emplace_back(ZERO); // 0010
 
@@ -112,7 +114,7 @@ libsnark::pb_variable_array<FieldT> get_tag_addr(
         tagged_a_sk.emplace_back(a_sk[i]);
     }
 
-    // Check that we correctly built a 256-bit string
+    // Check that we correctly built a 254-bit string
     assert(tagged_a_sk.size() == 254);
     std::cout << "PRF_addr_a_pk_gadget inputs: " << std::endl;
     tagged_a_sk.get_field_element_from_bits(pb).print();
@@ -140,7 +142,7 @@ libsnark::pb_variable_array<FieldT> get_tag_nf(
         tagged_a_sk.emplace_back(a_sk[i]);
     }
 
-    // Check that we correctly built a 256-bit string
+    // Check that we correctly built a 254-bit string
     assert(tagged_a_sk.size() == 254);
     std::cout << "PRF_nf_gadget inputs: " << std::endl;
     tagged_a_sk.get_field_element_from_bits(pb).print();
@@ -169,7 +171,7 @@ libsnark::pb_variable_array<FieldT> get_tag_pk(
     tagged_a_sk.emplace_back(ZERO); // 0 || index || 00
 
     // Should always be satisfied because a_sk
-    // is a 256 bit string. This is just a sanity check
+    // is a 254 bit string. This is just a sanity check
     // to make sure that the for loop doesn't
     // go out of the bound of the a_sk vector
     assert(a_sk.size() > 250);
@@ -177,7 +179,7 @@ libsnark::pb_variable_array<FieldT> get_tag_pk(
         tagged_a_sk.emplace_back(a_sk[i]);
     }
 
-    // Check that we correctly built a 256-bit string
+    // Check that we correctly built a 254-bit string
     assert(tagged_a_sk.size() == 254);
     std::cout << "PRF_pk_gadget inputs: " << std::endl;
     tagged_a_sk.get_field_element_from_bits(pb).print();
@@ -220,7 +222,7 @@ libsnark::pb_variable_array<FieldT> get_tag_rho(
 }
 
 // PRF to generate the public addresses
-// a_pk = blake2sCompress(0010 || [a_sk]_252 || 0^256): See ZCash protocol
+// a_pk = blake2sCompress(0010 || [a_sk]_250 || 0^256): See ZCash protocol
 // specification paper, page 57
 template<typename FieldT, typename HashT>
 PRF_addr_a_pk_gadget<FieldT, HashT>::PRF_addr_a_pk_gadget(
@@ -240,7 +242,7 @@ PRF_addr_a_pk_gadget<FieldT, HashT>::PRF_addr_a_pk_gadget(
 }
 
 // PRF to generate the nullifier
-// nf = blake2sCompress(1010 || [a_sk]_252 || rho): See ZCash protocol
+// nf = blake2sCompress(1010 || [a_sk]_250 || rho): See ZCash protocol
 // specification paper, page 57
 template<typename FieldT, typename HashT>
 PRF_nf_gadget<FieldT, HashT>::PRF_nf_gadget(

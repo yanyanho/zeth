@@ -194,6 +194,7 @@ public:
                     "\r  input (%zu / %zu)\n", i, libzeth::ZETH_NUM_JS_INPUTS);
                 zeth_proto::JoinsplitInput received_input =
                     proof_inputs->js_inputs(i);
+                std::cout << "here" << std::endl;
                 libzeth::joinsplit_input<
                     libzeth::FieldT,
                     libzeth::ZETH_MERKLE_TREE_DEPTH>

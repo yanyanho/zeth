@@ -40,7 +40,6 @@ bool TestValidJS2In2Case1(
         "note1=0x0");
 
     libff::enter_block("Instantiate merkle tree for the tests", true);
-    std::cout << "FieldT::capacity()： " << FieldT::capacity() << std::endl;
     // Create a merkle tree to run our tests
     // Note: `make_unique` should be C++14 compliant, but here we use c++11, so
     // we instantiate our unique_ptr manually
@@ -56,6 +55,32 @@ bool TestValidJS2In2Case1(
     // (commitment to spend in this test)
     bits254 trap_r_bits254 = bits254_from_hex(
         "12622773333ac5a24f3339a4d369d0070f495685c1783bec6b2d21f5efa24eef");
+    libsnark::protoboard<FieldT> pb;
+    libsnark::pb_variable_array<FieldT> bits;
+    bits.allocate(pb, 254, "bits");
+    //std::vector<bool> temp = bits254_to_vector(trap_r_bits254);
+    //std::vector<bool> bits_reverse;
+    //bits_reverse.reserve(254);
+    //std::vector<bool>::reverse_iterator riter;
+    //for (riter=temp.rbegin();riter!=temp.rend();riter++)
+    //{
+    //    bits_reverse.push_back(*riter);
+    //}
+    bits.fill_with_bits(pb, libff::bit_vector(bits254_to_vector(trap_r_bits254)));
+    std::cout << "trap_r bitx reverse transfer: " << std::endl;
+    for (size_t i = 0; i < 254; ++i)
+    {
+        const FieldT v = pb.val(bits[i]);
+        v.print();
+    }
+    libsnark::pb_variable_array<FieldT> bits_reverse;
+    bits_reverse.allocate(pb, 254, "bits_reverse");
+    for (int i = 0; i < 254; i++)
+    {
+        pb.val(bits_reverse[i]) = pb.val(bits[254-1-i]);
+    }
+    std::cout << "trap_r bits transfer: " << std::endl;
+    bits_reverse.get_field_element_from_bits(pb).print();
     bits64 value_bits64 = bits64_from_hex("2F0000000000000F");
     bits254 a_sk_bits254 = bits254_from_hex(
         "1388157dd25efd13d8e0cce226a1d553d98f31798f5b1744518d21f5efa24e69");
@@ -65,7 +90,7 @@ bool TestValidJS2In2Case1(
         "1388157cc25efd1d8e057f332fa7c75027614659a0fa1dec6b2d21f5efa24e6b");
     bits254 nf_bits254 = bits254_from_hex(
         "13826c9424e9d785471a321d59f5faf148372c5402e953ec6b2d21f5efa24e6b");
-    FieldT cm_field = FieldT("8410644201501653962052928139048471771185761253082441197009165808030604296632");
+    FieldT cm_field = FieldT("1653597135201294894523510427309877208093250134487626548716842321057024466667");
     const size_t address_commitment = 1;
     libff::bit_vector address_bits;
     for (size_t i = 0; i < TreeDepth; ++i) {

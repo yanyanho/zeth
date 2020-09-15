@@ -36,12 +36,12 @@ public:
         std::array<bool, TreeDepth> address_bits,
         zeth_note note,
         bits254 key,
-        bits254 nullifier)
-        : witness_merkle_path(witness_merkle_path)
-        , address_bits(address_bits)
-        , note(note)
-        , spending_key_a_sk(key)
-        , nullifier(nullifier)
+        bits254 nullifier):
+        witness_merkle_path(witness_merkle_path),
+        address_bits(address_bits),
+        note(note),
+        spending_key_a_sk(key),
+        nullifier(nullifier)
     {
     }
 };

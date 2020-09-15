@@ -91,13 +91,18 @@ joinsplit_input<FieldT, TreeDepth> joinsplit_input_from_proto(
         FieldT mk_node = field_element_from_hex<FieldT>(input.merkle_path(i));
         input_merkle_path.push_back(mk_node);
     }
-
+    std::cout << "parse joinsplit_input from proto" << std::endl;
+    std::array<bool, TreeDepth> address_bits = bits_addr_from_size_t<TreeDepth>(input.address());
+    zeth_note note = zeth_note_from_proto(input.note());
+    bits254 key = bits254_from_hex(input.spending_ask());
+    bits254 nullifier = bits254_from_hex(input.nullifier());
+    std::cout << "nullifier: " << input.nullifier() << std::endl;
     return joinsplit_input<FieldT, TreeDepth>(
         input_merkle_path,
-        bits_addr_from_size_t<TreeDepth>(input.address()),
-        zeth_note_from_proto(input.note()),
-        bits254_from_hex(input.spending_ask()),
-        bits254_from_hex(input.nullifier()));
+        address_bits,
+        note,
+        key,
+        nullifier);
 }
 
 template<typename ppT>

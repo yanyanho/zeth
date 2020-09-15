@@ -25,14 +25,21 @@ COMM_gadget<FieldT, HashT>::COMM_gadget(
     hasher.reset(new HashT(
         pb, *block, *result, FMT(this->annotation_prefix, " hasher_gadget")));
          */
+    reverse_x.allocate(pb, 254, "reverse_x");
+    reverse_y.allocate(pb, 254, "reverse_y");
     left.allocate(pb, "left");
-    pb.val(left) = x.get_field_element_from_bits(pb);
-    std::cout << "cm left: " << std::endl;
-    x.get_field_element_from_bits(pb).print();
     right.allocate(pb, "right");
-    pb.val(right) = y.get_field_element_from_bits(pb);
+    for (int i = 0; i < 254; i++)
+    {
+        pb.val(reverse_x[i]) = pb.val(x[254-1-i]);
+        pb.val(reverse_y[i]) = pb.val(y[254-1-i]);
+    }
+    this->pb.val(left) = reverse_x.get_field_element_from_bits(pb);
+    std::cout << "cm left: " << std::endl;
+    this->pb.val(left).print();
+    this->pb.val(right) = reverse_y.get_field_element_from_bits(pb);
     std::cout << "cm right: " << std::endl;
-    y.get_field_element_from_bits(pb).print();
+    this->pb.val(right).print();
     hasher.reset(new HashT(
             pb, left, right, FMT(this->annotation_prefix, " hasher_gadget")));
 }
@@ -50,11 +57,7 @@ void COMM_gadget<FieldT, HashT>::generate_r1cs_witness()
     hasher->generate_r1cs_witness();
     std::cout << "cm hash result: " << std::endl;
     this->pb.val(hasher->result()).print();
-    std::cout << "x in hasher: " << std::endl;
-    this->pb.val(hasher->x).print();
-    std::cout << "y in hasher: " << std::endl;
-    this->pb.val(hasher->y).print();
-    std::cout << "hex: " << field_element_to_hex(this->pb.val(hasher->result())) << std::endl;
+    std::cout << "cm result hex: " << field_element_to_hex(this->pb.val(hasher->result())) << std::endl;
     result->generate_r1cs_witness(libff::bit_vector(
             bits254_to_vector(bits254_from_hex(field_element_to_hex(this->pb.val(hasher->result()))))));
 }

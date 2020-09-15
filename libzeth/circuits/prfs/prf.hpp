@@ -25,6 +25,8 @@ private:
     std::shared_ptr<HashT> hasher; // Hash gadget used as a prf
 
 public:
+    libsnark::pb_variable_array<FieldT> reverse_x;
+    libsnark::pb_variable_array<FieldT> reverse_y;
     libsnark::pb_variable<FieldT> left;
     libsnark::pb_variable<FieldT> right;
     std::shared_ptr<libsnark::digest_variable<FieldT>> result;
