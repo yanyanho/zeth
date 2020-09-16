@@ -35,6 +35,7 @@ __pycache__
 env/
 *.egg-info
 .idea/
+cmake-build-debug/
 
 # Ignore some unix temp files
 *~

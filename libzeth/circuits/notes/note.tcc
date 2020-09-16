@@ -39,7 +39,6 @@ template<typename FieldT> void note_gadget<FieldT>::generate_r1cs_constraints()
             this->pb, r[i], FMT(this->annotation_prefix, " r[%zu]", i));
     }
 
-
 }
 */
 /*
