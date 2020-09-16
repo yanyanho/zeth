@@ -160,12 +160,10 @@ void input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::
             this->pb, rho[i], FMT(this->annotation_prefix, " rho"));
     }
      */
-<<<<<<< HEAD
-=======
+
 
     std::cout << "enter PRF_addr_a_pk_gadget" << std::endl;
 
->>>>>>> 324fa32314e4823f923142b298deac797f636a54
     spend_authority->generate_r1cs_constraints();
     expose_nullifiers->generate_r1cs_constraints();
     commit_to_inputs_cm->generate_r1cs_constraints();
