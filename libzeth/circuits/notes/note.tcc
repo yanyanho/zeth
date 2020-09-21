@@ -84,6 +84,10 @@ input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::input_note_gadget(
     spend_authority.reset(
         new PRF_addr_a_pk_gadget<FieldT, HashT>(pb, ZERO, a_sk->bits, a_pk));
 
+    // Witness a_pk for a_sk with PRF_addr
+    std::cout << "Witness PRF_addr_a_pk_gadget" << std::endl;
+    spend_authority->generate_r1cs_witness();
+
     // Call to the "PRF_nf_gadget" to make sure the nullifier is correctly
     // computed from a_sk and rho
     expose_nullifiers.reset(
@@ -194,10 +198,6 @@ void input_note_gadget<FieldT, HashT, HashTreeT, TreeDepth>::
 {
     // Generate witness of parent gadget
     //note_gadget<FieldT>::generate_r1cs_witness(note);
-
-    // Witness a_pk for a_sk with PRF_addr
-    std::cout << "Witness PRF_addr_a_pk_gadget" << std::endl;
-    spend_authority->generate_r1cs_witness();
 
     // Witness rho for the input note
     //rho.fill_with_bits(this->pb, bits254_to_vector(note.rho));
